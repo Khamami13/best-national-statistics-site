@@ -1,3 +1,11 @@
+// Nusantara Numbers — the hand-in for make.fun's "best national statistics site" bounty.
+// This entrypoint packs the finished site for the judge: it copies the site's app/
+// and screenshots/ folders from beside this file into the output directory, then
+// writes dossier.json there with the vendored buildDossier helper, which summarises
+// the screenshots, the first load's files and bytes, and the source for the scorer.
+// The site itself is plain static files — no build step, nothing fetched over the
+// network at runtime — so handing it in is just copying it and writing that summary.
+//
 // A working best-site-01 entry (Node 22, standard library only): the site is this directory's app/ folder, plain
 // static files a browser opens at app/index.html (ES modules, CSS, no build step), its content held in its own files:
 // nothing it runs, styles or shows loads over the network. The program hands it in: it copies app/ and screenshots/
@@ -14,7 +22,7 @@
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-frontend.ts';
@@ -34,3 +42,11 @@ writeFileSync(
   join(out, 'dossier.json'),
   buildDossier(out, { text_max_bytes: 163840, screenshots: { max: 4, max_bytes: 262144 }, app_max_files: 993, app_max_bytes: 16777216 }),
 );
+
+// Guard against a silent write failure: read the dossier straight back and refuse
+// to finish quietly if it is missing or empty, so a broken hand-in is loud, not invisible.
+// A missing file throws here on its own; the length check catches an empty one.
+const dossierPath = join(out, 'dossier.json');
+const dossierText = readFileSync(dossierPath, 'utf8');
+if (dossierText.length === 0) throw new Error(`dossier.json is empty at ${dossierPath}`);
+
